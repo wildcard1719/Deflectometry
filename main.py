@@ -8,6 +8,8 @@ import zmq
 
 RAW_W = 1920
 RAW_H = 1080
+IMAGE_W = 1080
+
 image_phase_1 = np.zeros((RAW_H, RAW_W, 1), np.float16)
 image_phase_2 = np.zeros((RAW_H, RAW_W, 1), np.float16)
 image_phase_3 = np.zeros((RAW_H, RAW_W, 1), np.float16)
@@ -19,7 +21,7 @@ image_ref = np.zeros((RAW_H, RAW_W, 1), np.float16)
 image_result = np.zeros((RAW_H, RAW_W, 1), np.float16)
 
 
-IP = "192.168.35.148"
+IP = "192.168.0.6"
 context = zmq.Context()
 subscriber = context.socket(zmq.SUB)
 subscriber.setsockopt(zmq.SUBSCRIBE, b"PRV")
@@ -48,7 +50,12 @@ flag_flow = "PRV"
 def norm(image, a, b, tp:type):
     image_min = image.min()
     image_max = image.max()
-    return (   a + (((image - image_min)*(b-a)) / (image_max - image_min)).astype(tp)   )
+    return ( a + (((image - image_min)*(b-a)) / (image_max - image_min)).astype(tp) )
+
+def square(image):
+    h = image.shape(0)
+    w = image.shape(1)
+    return image[h//2 - IMAGE_W//2 : h//2 + IMAGE_W//2, w//2 - IMAGE_W//2 : w//2 + IMAGE_W//2]
 
 
 def Preview():
