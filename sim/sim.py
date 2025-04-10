@@ -1,5 +1,6 @@
 import conf
 import numpy as np
+from scipy.optimize import root_scalar
 
 X_unit = np.array([1, 0, 0])
 Y_unit = np.array([0, 1, 0])
@@ -38,7 +39,9 @@ class Sim:
                     depth = 0
                 else:
                     ray.reset_hit()
-                    shade, depth = self.trace(ret)
+                    ret.set_reflected()
+                    if ray.get_reflected() == 0:
+                        shade, depth = self.trace(ret)
         return shade, depth
 
 
@@ -122,34 +125,56 @@ class Mirror(Sim):
     def get_location(self):
         return self.location
 
+    def f_asphere(self, x, y, R, k):
+        r2 = x ** 2 + y ** 2
+        sqrt_term = np.sqrt(1 - (1 + k) * (r2 / R ** 2))
+        z_conic = r2 / (R * (1 + sqrt_term))
+        return z_conic
+
+    def F(self, t):
+        x = self.ray.get_origin()[0] - self.location[0] + t * self.ray.get_direction()[0]
+        y = self.ray.get_origin()[1] - self.location[1] + t * self.ray.get_direction()[1]
+        z = self.ray.get_origin()[2] - self.location[2] + t * self.ray.get_direction()[2]
+        R = self.curve_c
+        k = self.curve_k
+        return z - self.f_asphere(x, y, R, k)
+
+    def grad_f_asphere(self, x, y, R, k, eps=1e-6):
+        fx = (self.f_asphere(x + eps, y, R, k) - self.f_asphere(x - eps, y, R, k)) / (2 * eps)
+        fy = (self.f_asphere(x, y + eps, R, k) - self.f_asphere(x, y - eps, R, k)) / (2 * eps)
+        return fx, fy
+
+    def get_normal_line(self, x, y, R, k):
+        fx, fy = self.grad_f_asphere(x, y, R, k)
+        n = np.array([-fx, -fy, 1.0])
+        return n / np.linalg.norm(n)
+
+    def line_2_point_distance(self, p, l0, v):
+        cross = np.cross(p - l0, v)
+        return np.linalg.norm(cross) / np.linalg.norm(v)
+
     def intersect(self, ray):
-        q = self.location
-        N = self.direction
-        #plane_u = np.cross(X_unit, N)
-        #plane_u_unit = plane_u / np.linalg.norm(plane_u)
-        #plane_v = np.cross(Z_unit, plane_u_unit)
-        #plane_v_unit = plane_v / np.linalg.norm(plane_v)
+        self.ray = ray
         v = ray.get_direction()
         p_0 = ray.get_origin()
-        if np.dot(N, v) >= 0:
-            return -1
-        t = np.dot(N, (q - p_0)) / np.dot(N, v)
-        p = p_0 + v * t
-        d = p - q
-        #a = np.dot(d, plane_u_unit)
-        #b = np.dot(d, plane_v_unit)
-        d_scala = np.linalg.norm(d)
-        if d_scala > self.radius:
-            return -1
-        if d_scala < self.hole_radius:
-            return -1
 
-        v_norm = -v / np.linalg.norm(v)
-        N_norm = N / np.linalg.norm(N)
-        direction_reflect = -(v_norm - 2 * np.dot(v_norm, N_norm) * N_norm)
-        ray.set_hit()
-
-        return Ray(p, direction_reflect, np.linalg.norm(v*t))
+        try:
+            sol = root_scalar(self.F, bracket=[10, 400], method='brentq')
+        except:
+            return -1
+        if sol.converged:
+            t_hit = sol.root
+            p = p_0 + v * t_hit
+            if self.line_2_point_distance(p, self.location, self.direction) > self.radius or self.line_2_point_distance(p, self.location, self.direction) < self.hole_radius:
+                return -1
+            p_local = p - self.location
+            nn = self.get_normal_line(p_local[0], p_local[1], self.curve_c, self.curve_k)
+            v_norm = v / np.linalg.norm(v)
+            v_reflect = (v_norm - 2 * np.dot(v_norm, nn) * nn)
+            ray.set_hit()
+            return Ray(p, v_reflect, np.linalg.norm(v * t_hit))
+        else:
+            return -1
 
 
 class Lcd(Sim):
@@ -162,7 +187,7 @@ class Lcd(Sim):
         self.width = conf.LCD_WIDTH
         self.height = conf.LCD_HEIGHT
         self.stripe_wave_length = conf.STRIPE_WAVE_LENGTH
-        self.stripe_vertical = 0
+        self.stripe_vertical = 1
         self.stripe_phase = 0
         self.parent = parent
         self.parent.objects.append(self)
@@ -218,6 +243,7 @@ class Ray:
         self.direction = direction / np.linalg.norm(direction)
         self.depth = depth
         self.hit = 0
+        self.reflected = 0
         self.intensity = 0
 
     def get_origin(self):
@@ -235,11 +261,17 @@ class Ray:
     def set_hit(self):
         self.hit = 1
 
+    def set_reflected(self):
+        self.reflected = 1
+
     def reset_hit(self):
         self.hit = 0
 
     def get_hit(self):
         return self.hit
+
+    def get_reflected(self):
+        return self.reflected
 
     def shade(self, intensity):
         self.intensity = intensity

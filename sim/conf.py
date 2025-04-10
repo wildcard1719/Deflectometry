@@ -4,10 +4,10 @@ yes = 1
 no = 0
 
 ### CAMERA CONFIG ###
-CAMERA_ORIGIN = np.array([100, 0, 100])  # [mm]
-CAMERA_DIRECTION = 'params'  # [unit vector] ( 'mirror' or 'lcd' or np.array([x, y, z]) )
-CAMERA_RESOLUTION = np.array([200, 200])  # [h, w]
-CAMERA_FOV = 30  # [deg]
+CAMERA_ORIGIN = np.array([-100, 0, 100])  # [mm]
+CAMERA_DIRECTION = np.array([-1, 0, 0])  # [unit vector]
+CAMERA_RESOLUTION = np.array([400, 400])  # [h, w]
+CAMERA_FOV = 25  # [deg]
 CAMERA_F = 17.53  # [mm]
 CAMERA_APERTURE = 1/2  # [F/x]
 
@@ -18,16 +18,16 @@ MIRROR_DIRECTION = np.array([0, 0, 1])  # [unit vector]
 MIRROR_HEIGHT = 15  # [mm]
 MIRROR_RADIUS = 25  # [mm]
 MIRROR_HOLE_RADIUS = 10  # [mm]
-MIRROR_CURVE_C = 100  # [mm] ( convex->negative / concave->positive )
-MIRROR_CURVE_K = -1
+MIRROR_CURVE_C = 300  # [mm] ( convex->negative / concave->positive )
+MIRROR_CURVE_K = -100
 
 
 ### LCD CONFIG ###
-LCD_ORIGIN = np.array([-100, 0, 100])  # [mm]
-LCD_DIRECTION = 'params'  # [unit vector]] ( 'mirror' or 'lcd' or np.array([x, y, z]) )
-LCD_WIDTH = 200  # [mm]
-LCD_HEIGHT = 120  # [mm]
-STRIPE_WAVE_LENGTH = 10  # [mm]
+LCD_ORIGIN = np.array([80, 0, 80])  # [mm]
+LCD_DIRECTION = np.array([1, 0, 0])  # [unit vector]
+LCD_WIDTH = 400  # [mm]
+LCD_HEIGHT = 300  # [mm]
+STRIPE_WAVE_LENGTH = 5  # [mm]
 
 
 ### SIMULATION SETTING ###
