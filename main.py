@@ -18,7 +18,8 @@ image_phase_4 = np.zeros((RAW_H, RAW_W, 1), np.float16)
 image_angle = np.zeros((RAW_H, RAW_W, 1), np.float16)
 image_unwrap = np.zeros((RAW_H, RAW_W, 1), np.float16)
 image_ref = np.zeros((RAW_H, RAW_W, 1), np.float16)
-image_result = np.zeros((RAW_H, RAW_W, 1), np.float16)
+image_delta = np.zeros((RAW_H, RAW_W, 1), np.float16)
+image_height = np.zeros((RAW_H, RAW_W, 1), np.float16)
 
 
 IP = "192.168.0.6"
@@ -105,7 +106,7 @@ def Recv():
 
 
 def Process():
-    global flag_flow, image_angle, image_unwrap, image_ref, image_result
+    global flag_flow, image_angle, image_unwrap, image_ref, image_delta
     image_1 = cv2.normalize(image_phase_1, None, 0, 255, cv2.NORM_MINMAX)
     image_2 = cv2.normalize(image_phase_2, None, 0, 255, cv2.NORM_MINMAX)
     image_3 = cv2.normalize(image_phase_3, None, 0, 255, cv2.NORM_MINMAX)
@@ -124,19 +125,22 @@ def Process():
         line_norm = norm(line_unwrap, 0, 255, np.float16)
         image_unwrap[i, :] = line_norm.reshape(-1, 1)
 
-    image_result = norm(((image_unwrap - image_ref) +128.0), 0, 255, np.float16)
+    image_delta = norm(((image_unwrap - image_ref) +128.0), 0, 255, np.float16)
 
-    ax.cla()
-    ax.plot(image_result[0, :500], 'b-')
-    plt.pause(0.0000001)
+    image_height = np.cumsum((image_delta-128.0)*0.002, axis=1)+128
+
+    plt.clf()
+    plt.imshow(image_height, cmap='jet')
+    plt.colorbar()
+    plt.pause(0.1)
     plt.show(block=False)
 
-
-    cv2.imshow("Deflectometry", cv2.resize(image_result.astype(np.uint8), (1920//2, 1080//2)))
-    cv2.imwrite("raw.png", image_1.astype(np.uint8))
-    cv2.imwrite("phase.png", image_angle_norm.astype(np.uint8))
-    cv2.imwrite("unwrap.png", image_unwrap.astype(np.uint8))
-    cv2.imwrite("result.png", image_result.astype(np.uint8))
+    cv2.imshow("Deflectometry", cv2.resize(image_delta.astype(np.uint8), (1920//2, 1080//2)))
+    cv2.imwrite("pics/raw.png", image_1.astype(np.uint8))
+    cv2.imwrite("pics/phase.png", image_angle_norm.astype(np.uint8))
+    cv2.imwrite("pics/unwrap.png", image_unwrap.astype(np.uint8))
+    cv2.imwrite("pics/delta.png", image_delta.astype(np.uint8))
+    cv2.imwrite("pics/height.png", image_height.astype(np.uint8))
     k = cv2.waitKey(1)
     if k == 27:
         flag_flow = "ABT"

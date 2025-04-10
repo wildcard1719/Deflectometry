@@ -55,8 +55,8 @@ def WaitRequest():
         if k == 27:
             flag_flow = "ABT"
         image_prv = image
-        _, image_prv_zip = cv2.imencode('.png', cv2.resize(image_prv, (320, 240)))
-        
+        _, image_prv_zip = cv2.imencode('.png', cv2.resize(image_prv, (320, 180)))
+
         data_plot = image_prv[image_prv.shape[0]//2, :].reshape(image_prv.shape[1]).tolist()
         publisher.send_multipart([b"PRV", image_prv_zip.tobytes()])
         publisher.send_multipart([b"DAT", bytes(data_plot)])
