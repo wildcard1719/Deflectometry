@@ -11,9 +11,6 @@ cam = Camera(sim)
 lcd.set_direction(mirror)
 cam.set_direction(mirror)
 
-sim.render(cam)
-image = sim.get_image_raw()
-depth = sim.get_image_depth_raw()
-
-cv2.imwrite('image_raw.jpg', image)
-cv2.imwrite('image_depth.jpg', depth)
+image = sim.deflectometry(cam, lcd)
+#image, _ = sim.render(cam)
+cv2.imwrite('./sim/sim_pics/image.jpg', image)
