@@ -3,7 +3,6 @@ import cv2
 import conf
 import numpy as np
 from scipy.optimize import root_scalar
-from skimage.restoration import unwrap_phase
 
 
 X_unit = np.array([1, 0, 0])
@@ -16,19 +15,33 @@ class Sim:
         self.objects = []
 
     def deflectometry(self, cam, lcd):
-        vertical = 1
+        vertical = 0
         lcd.set_vertical(vertical)
+
+        image_green, mask = self.get_mask(cam, lcd)
+
+        image_angle_1 = self.get_phase_image(cam, lcd)
+        image_angle_1_masked = np.ma.array(image_angle_1, mask=mask)
+        lcd.move()
+        image_angle_2 = self.get_phase_image(cam, lcd)
+        image_angle_2_masked = np.ma.array(image_angle_2, mask=mask)
+
+        phase_delta = abs(self.phase_distance(image_angle_1_masked, image_angle_2_masked))
+        phase_delta_norm = self.norm(phase_delta, 0, 255, np.float16)
+
+        cv2.imwrite("./sim/sim_pics/phase_delta.jpg", phase_delta_norm)
+
+
+    def get_mask(self, cam, lcd):
         lcd.green = 1
         image_green, _ = self.render(cam)
         lcd.green = 0
         mask = np.zeros_like(image_green)
         mask[image_green == 0] = True
+        return image_green, mask
 
-        image_ref = np.zeros_like(image_green)
-        image_ref_center, (x_min, x_max, y_min, y_max) = self.gen_ref_phase_image(image_green, vertical)
-        image_ref[y_min:y_max+1, x_min:x_max+1] = image_ref_center
-        cv2.imwrite("./sim/sim_pics/ref.jpg", image_ref)
 
+    def get_phase_image(self, cam, lcd):
         lcd.set_phase(0)
         image_phase_1, _ = self.render(cam)
         cv2.imwrite("./sim/sim_pics/raw.jpg", image_phase_1)
@@ -41,18 +54,16 @@ class Sim:
 
         image_angle = (np.angle(((image_phase_1 - 128.0) - (image_phase_3 - 128.0)) / 2 + 1j * (
                     (image_phase_2 - 128.0) - (image_phase_4 - 128.0)) / 2)).astype(np.float16)
+        image_angle_norm = self.norm(image_angle, 0, 255, np.float16)
+        cv2.imwrite("./sim/sim_pics/phase.jpg", image_angle_norm)
+        return image_angle
 
-        image_angle_masked = np.ma.array(image_angle, mask=mask)
 
-        image_unwrap = unwrap_phase(image_angle_masked)
-        image_unwrap_norm = self.norm(image_unwrap, 0, 255, np.float16)
-        cv2.imwrite("./sim/sim_pics/unwrap.jpg", image_unwrap_norm)
 
-        image_delta = image_unwrap_norm - image_ref + 128
-        image_delta_norm = self.norm(image_delta, 0, 255, np.float16)
-        cv2.imwrite("./sim/sim_pics/delta.jpg", image_delta_norm)
+    def phase_distance(self, image_1, image_2):
+        delta = image_2 - image_1
+        return (delta + np.pi) % (2 * np.pi) - np.pi
 
-        return image_delta_norm.astype(np.uint8)
 
     def gen_ref_phase_image(self, image, vertical):
         ys, xs, _ = np.where(image == 255)
@@ -61,13 +72,17 @@ class Sim:
         w = x_max - x_min + 1
         h = y_max - y_min + 1
         image_ref = np.zeros((h, w, 1), np.float16)
+        image_ref_reverse = np.zeros((h, w, 1), np.float16)
         if vertical == 0:
             for i in range(w):
                 image_ref[:, i] = ((float(i) / float(w)) * 255.0)
+                image_ref_reverse[:, i] = 255.0 - ((float(i) / float(w)) * 255.0)
         else:
             for i in range(h):
                 image_ref[i, :] = ((float(i) / float(h)) * 255.0)
-        return image_ref, (x_min, x_max, y_min, y_max)
+                image_ref_reverse[i, :] = 255.0 - ((float(i) / float(h)) * 255.0)
+        return image_ref, image_ref_reverse, (x_min, x_max, y_min, y_max)
+
 
     def render(self, cam):
         w = cam.get_width()
@@ -105,6 +120,7 @@ class Sim:
                         shade, depth = self.trace(ret)
         return shade, depth
 
+
     def save(self, image, name):
         mc = str(conf.MIRROR_CURVE_C)
         mk = str(conf.MIRROR_CURVE_K)
@@ -129,8 +145,10 @@ class Sim:
         image_max = image.max()
         return (a + (((image - image_min) * (b - a)) / (image_max - image_min)).astype(tp))
 
+
     def get_image_raw(self):
         return self.image_raw
+
 
     def get_image_depth_raw(self):
         return self.image_depth_raw
@@ -209,6 +227,7 @@ class Mirror:
     def get_location(self):
         return self.location
 
+
     def f_asphere(self, x, y, R, k):
         r2 = x ** 2 + y ** 2
         sqrt_term = np.sqrt(1 - (1 + k) * (r2 / R ** 2))
@@ -266,6 +285,7 @@ class Lcd:
         self.object_info = 'lcd'
         self.location_origin = conf.LCD_ORIGIN
         self.location = conf.LCD_ORIGIN
+        self.move_delta = conf.LCD_MOVE_VECTOR
         self.direction_origin = conf.LCD_DIRECTION
         self.direction = conf.LCD_DIRECTION
         self.width = conf.LCD_WIDTH
@@ -282,6 +302,9 @@ class Lcd:
 
     def get_location(self):
         return self.location
+
+    def move(self):
+        self.location += self.move_delta
 
     def set_direction(self, target):
         v = target.get_location_origin() - self.location

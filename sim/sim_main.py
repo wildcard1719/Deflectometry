@@ -8,7 +8,7 @@ mirror = Mirror(sim)
 lcd = Lcd(sim)
 cam = Camera(sim)
 
-lcd.set_direction(mirror)
+#lcd.set_direction(mirror)
 cam.set_direction(mirror)
 
 image = sim.deflectometry(cam, lcd)
