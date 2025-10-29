@@ -6,8 +6,8 @@ no = 0
 ### CAMERA CONFIG ###
 CAMERA_ORIGIN = np.array([-200, 0, 200])  # [mm]
 CAMERA_DIRECTION = np.array([-1, 0, 0])  # [unit vector]
-CAMERA_RESOLUTION = np.array([250, 250])  # [h, w]
-CAMERA_FOV = 18  # [deg]
+CAMERA_RESOLUTION = np.array([100, 100])  # [h, w]
+CAMERA_FOV = 18  # [deg]sim/
 CAMERA_F = 17.53  # [mm]
 CAMERA_APERTURE = 1/2  # [F/x]
 
@@ -24,8 +24,8 @@ MIRROR_CURVE_K = -1.244
 
 ### LCD CONFIG ###
 LCD_ORIGIN = np.array([150, 0, 150])  # [mm]
-LCD_MOVE_VECTOR = np.array([0, 0, 3])  # [mm]
-LCD_DIRECTION = np.array([-1e-6, 0, -1])  # [unit vector]
+LCD_MOVE_VECTOR = np.array([3, 0, 3])  # [mm]
+LCD_DIRECTION = np.array([-1, 0, -1])  # [unit vector]
 LCD_WIDTH = 300  # [mm]
 LCD_HEIGHT = 1000  # [mm]
 STRIPE_WAVE_LENGTH = 15  # [mm]
